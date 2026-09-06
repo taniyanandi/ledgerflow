@@ -190,18 +190,6 @@ Idempotency semantics:
 
 ---
 
-## What this proves I can do
-
-- Model money and ledgers correctly (integer minor units, double-entry, derived balances)
-- Design an idempotent, retry-safe write API the way Stripe/Razorpay do
-- Enforce invariants in code *and* at the database (CHECK constraints, unique keys, FKs)
-- Own a schema with versioned migrations
-- Write integration tests against a real database, not mocks
-- Model a payment lifecycle as an explicit state machine and a **saga** with compensating transactions, so multi-step flows stay consistent under failure
-- Build an event-driven backbone on **Kafka** with an idempotent, at-least-once-safe consumer and a durable audit trail
-- Train, tune, and serve an **XGBoost fraud model** with **SHAP explanations**, and integrate it into a JVM service with fail-soft degradation
-- Integrate an LLM (Claude/Bedrock via Spring AI) as a **tool-calling agent** grounded in real data, with a config-selectable fail-soft fallback so an AI outage can never affect a payment
-- Design cloud infrastructure as code (Terraform: VPC, ECS Fargate, RDS, MSK Serverless, scoped IAM) for a real AWS deployment
 
 ---
 

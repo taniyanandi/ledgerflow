@@ -1,0 +1,23 @@
+{
+  "features": [
+    "amount",
+    "amount_zscore",
+    "txn_velocity_1h",
+    "geo_distance_km",
+    "device_new",
+    "hour_of_day",
+    "is_foreign",
+    "card_age_days"
+  ],
+  "threshold": 0.8750847578048706,
+  "metrics": {
+    "roc_auc": 0.9173,
+    "pr_auc": 0.8359,
+    "precision_at_threshold": 0.9018,
+    "recall_at_threshold": 0.8313,
+    "threshold": 0.8751,
+    "n_train": 45000,
+    "n_test": 15000,
+    "fraud_rate": 0.0162
+  }
+}

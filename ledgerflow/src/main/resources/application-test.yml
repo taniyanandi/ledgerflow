@@ -1,0 +1,8 @@
+# Test profile: no Kafka broker, events fall back to logging. The fraud client
+# hits an unreachable URL on purpose so tests exercise the rules-based fallback
+# without needing the Python service running.
+ledgerflow:
+  events:
+    transport: noop
+  fraud:
+    base-url: http://localhost:0

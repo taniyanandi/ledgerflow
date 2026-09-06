@@ -1,0 +1,55 @@
+spring:
+  application:
+    name: ledgerflow
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/ledgerflow}
+    username: ${DB_USER:ledgerflow}
+    password: ${DB_PASSWORD:ledgerflow}
+  jpa:
+    hibernate:
+      ddl-auto: validate      # schema is owned by Flyway, never by Hibernate
+    open-in-view: false
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    # V5/V6 ("fix currency column type" migrations) were applied to this DB historically
+    # but their .sql files aren't present in this checkout; tolerate the gap rather than
+    # failing validation on migrations we can't resolve locally.
+    ignore-migration-patterns: "*:missing"
+  kafka:
+    # 29092 is the HOST listener in docker-compose.yml, advertised as localhost:29092 for
+    # apps run directly on the host; the containerized 'app' service overrides this to
+    # kafka:9092 (the internal listener) via its own KAFKA_BOOTSTRAP env var.
+    bootstrap-servers: ${KAFKA_BOOTSTRAP:localhost:29092}
+    consumer:
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      show-details: always
+
+# LedgerFlow-specific settings
+ledgerflow:
+  events:
+    # 'kafka' publishes to a broker and persists an audit trail; 'noop' just logs.
+    transport: ${EVENTS_TRANSPORT:kafka}
+  fraud:
+    base-url: ${FRAUD_BASE_URL:http://localhost:8000}
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html

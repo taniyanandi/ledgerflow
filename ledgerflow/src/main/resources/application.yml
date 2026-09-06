@@ -49,6 +49,23 @@ ledgerflow:
     transport: ${EVENTS_TRANSPORT:kafka}
   fraud:
     base-url: ${FRAUD_BASE_URL:http://localhost:8000}
+  ai:
+    # 'template' generates narratives from the SHAP reasons locally, no AWS needed —
+    # the safe default for local dev, tests, and CI. Set to 'bedrock' to use a real
+    # Claude model on AWS Bedrock (requires AWS credentials via the default provider
+    # chain, and Bedrock model access enabled in-console for the target region).
+    provider: ${AI_PROVIDER:template}
+    bedrock:
+      region: ${AWS_REGION:us-east-1}
+      model-id: ${AI_MODEL_ID:anthropic.claude-3-5-haiku-20241022-v1:0}
+      timeout-ms: ${AI_TIMEOUT_MS:8000}
+      max-tokens: ${AI_MAX_TOKENS:600}
+    assistant:
+      max-tool-hops: ${AI_MAX_TOOL_HOPS:3}
+
+# Spring AI's Bedrock autoconfiguration activates whenever the starter is on the
+# classpath; keep it inert until 'bedrock' is actually selected above.
+spring.ai.bedrock.converse.chat.enabled: ${SPRING_AI_BEDROCK_ENABLED:false}
 
 springdoc:
   swagger-ui:

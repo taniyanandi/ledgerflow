@@ -1,7 +1,9 @@
 package com.ledgerflow.orchestration;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ledgerflow.domain.Enums.PaymentStatus;
 import com.ledgerflow.domain.Payment;
+import com.ledgerflow.domain.RiskDecisionRecord;
 import com.ledgerflow.events.PaymentEvent;
 import com.ledgerflow.events.PaymentEventPublisher;
 import com.ledgerflow.exception.ApiException;
@@ -12,11 +14,15 @@ import com.ledgerflow.orchestration.saga.SagaExecutor;
 import com.ledgerflow.orchestration.saga.SagaException;
 import com.ledgerflow.orchestration.saga.SagaStep;
 import com.ledgerflow.repository.PaymentRepository;
+import com.ledgerflow.repository.RiskDecisionRepository;
 import com.ledgerflow.service.LedgerService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
@@ -33,22 +39,30 @@ import java.util.UUID;
 @Service
 public class PaymentOrchestrationService {
 
+    private static final Logger log = LoggerFactory.getLogger(PaymentOrchestrationService.class);
+
     private final PaymentRepository payments;
     private final PaymentStateMachine stateMachine;
     private final LedgerService ledger;
     private final FraudScoringClient fraud;
     private final PaymentEventPublisher events;
+    private final RiskDecisionRepository riskDecisions;
+    private final ObjectMapper objectMapper;
 
     public PaymentOrchestrationService(PaymentRepository payments,
                                        PaymentStateMachine stateMachine,
                                        LedgerService ledger,
                                        FraudScoringClient fraud,
-                                       PaymentEventPublisher events) {
+                                       PaymentEventPublisher events,
+                                       RiskDecisionRepository riskDecisions,
+                                       ObjectMapper objectMapper) {
         this.payments = payments;
         this.stateMachine = stateMachine;
         this.ledger = ledger;
         this.fraud = fraud;
         this.events = events;
+        this.riskDecisions = riskDecisions;
+        this.objectMapper = objectMapper;
     }
 
     @Transactional
@@ -99,6 +113,7 @@ public class PaymentOrchestrationService {
             public void execute(PaymentContext ctx) {
                 RiskDecision decision = fraud.score(ctx.getSignals());
                 ctx.setRiskDecision(decision);
+                recordDecision(ctx.getPayment(), decision);
                 if (decision.isBlocked()) {
                     emit("PaymentDeclined", ctx.getPayment(),
                             "fraud p=" + decision.fraudProbability()
@@ -132,6 +147,22 @@ public class PaymentOrchestrationService {
     }
 
     // --- helpers ------------------------------------------------------------
+
+    /**
+     * Persists the quantitative decision (fast, local insert — no external call) so
+     * the LLM risk analyst can look it up later without ever sitting on this path.
+     */
+    private void recordDecision(Payment payment, RiskDecision decision) {
+        try {
+            String reasonsJson = objectMapper.writeValueAsString(decision.reasons());
+            riskDecisions.save(new RiskDecisionRecord(
+                    UUID.randomUUID(), payment.getId(), decision.fraudProbability(),
+                    decision.decision().name(), reasonsJson, decision.degraded(),
+                    Instant.now()));
+        } catch (Exception e) {
+            log.warn("Failed to persist risk decision for payment {}: {}", payment.getId(), e.toString());
+        }
+    }
 
     private void transition(Payment payment, PaymentStatus to) {
         stateMachine.assertCanTransition(payment.getStatus(), to);

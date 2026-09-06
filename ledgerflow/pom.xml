@@ -19,7 +19,23 @@
 
     <properties>
         <java.version>21</java.version>
+        <spring-ai.version>1.0.0</spring-ai.version>
     </properties>
+
+    <!-- Spring AI 1.0.0 GA is on Maven Central. If a newer/older Spring AI version is
+         needed for compatibility with the Boot parent above, also add the
+         https://repo.spring.io/milestone (or /snapshot) repository under <repositories>. -->
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>org.springframework.ai</groupId>
+                <artifactId>spring-ai-bom</artifactId>
+                <version>${spring-ai.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
 
     <dependencies>
         <dependency>
@@ -59,6 +75,10 @@
             <groupId>org.springdoc</groupId>
             <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
             <version>2.6.0</version>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.ai</groupId>
+            <artifactId>spring-ai-bedrock-converse-spring-boot-starter</artifactId>
         </dependency>
 
         <!-- Test -->

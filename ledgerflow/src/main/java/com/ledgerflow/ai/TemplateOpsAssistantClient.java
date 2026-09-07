@@ -1,5 +1,6 @@
 package com.ledgerflow.ai;
 
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -10,12 +11,14 @@ import java.util.regex.Pattern;
  * Deterministic ops assistant: no LLM call, no network. If the question contains a
  * payment id, look it up directly and report what's known; otherwise say plainly
  * that only id-based lookups are supported. Never returns silently empty — every
- * path returns a legible answer.
+ * path returns a legible answer. This is the default provider and also what
+ * {@link AnthropicOpsAssistantClient} falls back to on any failure.
  */
 @Component
+@ConditionalOnProperty(name = "ledgerflow.ai.provider", havingValue = "template", matchIfMissing = true)
 public class TemplateOpsAssistantClient implements OpsAssistantClient {
 
-    private static final Pattern UUID_PATTERN = Pattern.compile(
+    static final Pattern UUID_PATTERN = Pattern.compile(
             "[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}");
 
     private final OpsAssistantTool tool;

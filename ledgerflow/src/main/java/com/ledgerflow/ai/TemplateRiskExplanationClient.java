@@ -2,6 +2,7 @@ package com.ledgerflow.ai;
 
 import com.ledgerflow.domain.Payment;
 import com.ledgerflow.fraud.RiskDecision;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
 import java.util.Comparator;
@@ -11,9 +12,12 @@ import java.util.stream.Collectors;
 /**
  * Deterministic, code-generated narrative built directly from the SHAP/rules reasons
  * already on the {@link RiskDecision} — no LLM call, no network, no external service
- * dependency at all.
+ * dependency at all. This is the default provider (safe for local dev, tests, and
+ * CI) and also what {@link AnthropicRiskExplanationClient} falls back to on any
+ * failure, so the fallback formatting logic exists in exactly one place.
  */
 @Component
+@ConditionalOnProperty(name = "ledgerflow.ai.provider", havingValue = "template", matchIfMissing = true)
 public class TemplateRiskExplanationClient implements RiskExplanationClient {
 
     @Override

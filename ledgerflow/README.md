@@ -6,7 +6,7 @@ Delivered so far:
 - **Phase 1 — Financial core:** idempotent payment API + double-entry ledger
 - **Phase 2 — Orchestration:** explicit state machine + saga with compensating transactions + Kafka event backbone
 - **Phase 4 — AI risk:** real-time XGBoost fraud scoring with SHAP explanations (`fraud-service/`), wired into the saga's risk-check step
-- **Phase 6 — Risk analyst:** a natural-language narrative layer over SHAP reasons for reviewers, plus an ops assistant for looking up a payment's status/risk decision — both run outside the saga, fully local, no external AI service
+- **Phase 6 — LLM risk analyst:** Claude (Anthropic API) turns SHAP reasons into a plain-English narrative for reviewers, plus an ops assistant that answers questions about a specific payment — both run outside the saga and fail soft to a deterministic local template with zero external dependency
 
 > The goal of this project is not to clone a checkout button. It is to demonstrate the machinery underneath a payment gateway — the parts that are hard to get right and that payment teams actually screen for: **idempotency, double-entry correctness, exact money arithmetic, safe state transitions, and real integration testing.**
 
@@ -84,20 +84,28 @@ If the fraud service is slow or down, `HttpFraudScoringClient` degrades to a
 **rules-based fallback** and flags the decision `degraded` rather than failing the
 payment (fail-soft). Model details and metrics live in [`fraud-service/README.md`](fraud-service/README.md).
 
-## Risk analyst & ops assistant (Phase 6)
+## LLM risk analyst & ops assistant (Phase 6)
 
 Every risk decision the saga makes is persisted (`risk_decisions`). Two endpoints
-build a natural-language layer on top of it — entirely local, no external AI
-service, and both designed to run outside the saga so this layer can never affect
-payment processing:
+build a natural-language layer on top of it, powered by **Claude via the Anthropic
+API directly** (no cloud provider in between) — both are designed to run entirely
+*outside* the saga, so an LLM outage can never affect a payment, only the richness
+of a narrative:
 
 - `GET /v1/orchestrated-payments/{id}/risk-explanation` — find-or-generate a
-  plain-English narrative directly from the payment's SHAP reasons (top
-  contributing features, probability, verdict). Generated once and persisted
-  (`risk_explanations`); later calls return the same narrative.
+  plain-English narrative over the payment's SHAP reasons, grounded strictly in
+  those facts (the prompt forbids inventing new risk factors). Generated once and
+  persisted (`risk_explanations`); later calls return the same narrative.
 - `POST /v1/ops-assistant/ask` — ask about a specific payment by id (e.g. "why was
-  payment `<uuid>` declined") and get back its status, risk decision, and
-  narrative in one answer.
+  payment `<uuid>` declined"). The payment is looked up deterministically first
+  (never guessed by the model), then Claude composes the answer strictly from
+  those retrieved facts — grounding by construction, not just by instruction.
+
+Both default to `ledgerflow.ai.provider=template` — a deterministic, code-generated
+fallback with zero external dependency, so `mvn test`, local dev, and CI never need
+an API key. Set `AI_PROVIDER=anthropic` plus `ANTHROPIC_API_KEY` to use the real
+model; any failure — timeout, auth, malformed response — falls back to the same
+template output, flagged `degraded: true`.
 
 ---
 
@@ -171,8 +179,8 @@ mvn test
 | `GET`  | `/v1/accounts/{code}/balance` | Live, derived account balance |
 | `POST` | `/v1/orchestrated-payments` | Full saga: authorize → ML risk check → capture |
 | `GET`  | `/v1/orchestrated-payments/{id}/events` | Persisted event audit trail |
-| `GET`  | `/v1/orchestrated-payments/{id}/risk-explanation` | Find-or-generate a narrative over the risk decision |
-| `POST` | `/v1/ops-assistant/ask` | Ask about a payment by id |
+| `GET`  | `/v1/orchestrated-payments/{id}/risk-explanation` | Find-or-generate an LLM narrative over the risk decision |
+| `POST` | `/v1/ops-assistant/ask` | Ask about a payment by id; Claude answers from the retrieved facts |
 | `POST` | `/score` *(fraud-service, port 8000)* | Fraud probability + decision + SHAP reasons |
 
 Idempotency semantics:
@@ -189,7 +197,7 @@ Idempotency semantics:
 - ⬜ **Phase 3 — Webhooks + reconciliation.** Signed outbound events with retries and a dead-letter queue; a reconciliation engine matching the ledger against settlement files.
 - ✅ **Phase 4 — AI fraud scoring.** XGBoost model with **SHAP explanations** in the decline response, so every "declined: fraud" says *why*. Fail-soft rules fallback.
 - ⬜ **Phase 5 — Smart payment routing.** Predict success probability per acquiring route and route to maximise expected success at minimum cost (Razorpay-Optimizer style).
-- ✅ **Phase 6 — Risk analyst & ops assistant.** Natural-language risk explanations generated directly from SHAP reasons, and an ops assistant for looking up a payment's status/decision. Fully local — no external AI service dependency.
+- ✅ **Phase 6 — LLM risk analyst & ops assistant (Anthropic API).** Natural-language risk explanations grounded in SHAP reasons, and an ops assistant that answers from deterministically-retrieved payment facts. Fail-soft template fallback when Claude is unavailable or no API key is configured.
 
 ---
 

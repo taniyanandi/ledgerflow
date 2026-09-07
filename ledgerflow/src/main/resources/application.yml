@@ -49,6 +49,16 @@ ledgerflow:
     transport: ${EVENTS_TRANSPORT:kafka}
   fraud:
     base-url: ${FRAUD_BASE_URL:http://localhost:8000}
+  ai:
+    # 'template' generates narratives from the SHAP reasons locally, no external
+    # service needed — the safe default for local dev, tests, and CI. Set to
+    # 'anthropic' to call Claude directly (needs ANTHROPIC_API_KEY).
+    provider: ${AI_PROVIDER:template}
+    anthropic:
+      api-key: ${ANTHROPIC_API_KEY:}
+      model: ${ANTHROPIC_MODEL:claude-haiku-4-5-20251001}
+      timeout-ms: ${ANTHROPIC_TIMEOUT_MS:15000}
+      max-tokens: ${ANTHROPIC_MAX_TOKENS:600}
 
 springdoc:
   swagger-ui:

@@ -54,5 +54,10 @@ services:
       KAFKA_BOOTSTRAP: kafka:9092
       EVENTS_TRANSPORT: kafka
       FRAUD_BASE_URL: http://fraud-service:8000
+      # AI_PROVIDER stays 'template' so compose never needs an API key. To try the
+      # real Claude-backed risk analyst locally, set AI_PROVIDER=anthropic and
+      # export ANTHROPIC_API_KEY — never hardcode the key here.
+      AI_PROVIDER: template
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
     ports:
       - "8080:8080"

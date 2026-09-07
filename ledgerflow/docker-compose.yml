@@ -54,13 +54,5 @@ services:
       KAFKA_BOOTSTRAP: kafka:9092
       EVENTS_TRANSPORT: kafka
       FRAUD_BASE_URL: http://fraud-service:8000
-      # AI_PROVIDER stays 'template' so compose never needs AWS credentials. To try
-      # the real Bedrock-backed risk analyst locally, set AI_PROVIDER=bedrock and
-      # SPRING_AI_BEDROCK_ENABLED=true, and mount/export real AWS credentials
-      # (~/.aws/credentials or AWS_ACCESS_KEY_ID/AWS_SECRET_ACCESS_KEY) — never
-      # hardcode keys here.
-      AI_PROVIDER: template
-      AWS_REGION: us-east-1
-      AI_MODEL_ID: anthropic.claude-3-5-haiku-20241022-v1:0
     ports:
       - "8080:8080"

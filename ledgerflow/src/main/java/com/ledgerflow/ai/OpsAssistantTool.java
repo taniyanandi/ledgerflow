@@ -1,6 +1,5 @@
 package com.ledgerflow.ai;
 
-import com.ledgerflow.domain.Enums.PaymentStatus;
 import com.ledgerflow.domain.Payment;
 import com.ledgerflow.domain.RiskDecisionRecord;
 import com.ledgerflow.domain.RiskExplanationRecord;
@@ -8,20 +7,15 @@ import com.ledgerflow.repository.PaymentEventRepository;
 import com.ledgerflow.repository.PaymentRepository;
 import com.ledgerflow.repository.RiskDecisionRepository;
 import com.ledgerflow.repository.RiskExplanationRepository;
-import com.ledgerflow.service.LedgerService;
-import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.stereotype.Component;
 
-import java.time.Instant;
-import java.time.temporal.ChronoUnit;
-import java.util.List;
 import java.util.UUID;
 
 /**
  * Read-only data access for the ops assistant. Every method here is a plain query
- * against existing repositories/services — nothing here can mutate a payment,
- * account, or any other state. This is a hard boundary: the LLM ops assistant may
- * look at data and reason about it, but it can never take an action.
+ * against existing repositories — nothing here can mutate a payment or any other
+ * state. This is a hard boundary: the ops assistant may look at data and reason
+ * about it, but it can never take an action.
  */
 @Component
 public class OpsAssistantTool {
@@ -30,31 +24,17 @@ public class OpsAssistantTool {
     private final PaymentEventRepository events;
     private final RiskDecisionRepository decisions;
     private final RiskExplanationRepository explanations;
-    private final LedgerService ledger;
 
     public OpsAssistantTool(PaymentRepository payments, PaymentEventRepository events,
                             RiskDecisionRepository decisions,
-                            RiskExplanationRepository explanations, LedgerService ledger) {
+                            RiskExplanationRepository explanations) {
         this.payments = payments;
         this.events = events;
         this.decisions = decisions;
         this.explanations = explanations;
-        this.ledger = ledger;
     }
 
-    @Tool(description = "List payments created in the last N hours, optionally filtered by "
-            + "status (INITIATED, AUTHORIZED, CAPTURED, FAILED, REFUNDED). Pass status=null for all.")
-    public List<PaymentSummary> findRecentPayments(String status, int hours) {
-        Instant since = Instant.now().minus(hours, ChronoUnit.HOURS);
-        List<Payment> found = (status == null || status.isBlank())
-                ? payments.findByCreatedAtAfterOrderByCreatedAtDesc(since)
-                : payments.findByStatusAndCreatedAtAfterOrderByCreatedAtDesc(
-                        PaymentStatus.valueOf(status.toUpperCase()), since);
-        return found.stream().map(PaymentSummary::from).toList();
-    }
-
-    @Tool(description = "Get full detail for one payment by id: status, amount, the most recent "
-            + "risk decision (fraud probability, verdict, SHAP reasons), and any generated risk explanation.")
+    /** Full detail for one payment: status, amount, latest risk decision, and any generated explanation. */
     public PaymentDetail getPaymentDetail(String paymentId) {
         UUID id = UUID.fromString(paymentId);
         Payment payment = payments.findById(id).orElse(null);
@@ -71,14 +51,6 @@ public class OpsAssistantTool {
                 decision == null ? null : decision.getReasons(),
                 explanation == null ? null : explanation.getNarrative(),
                 (int) eventCount);
-    }
-
-    @Tool(description = "Get the live, derived balance of a ledger account by its code "
-            + "(e.g. ACQUIRER_CASH, MERCHANT_PAYABLE).")
-    public String getAccountBalance(String accountCode) {
-        long minor = ledger.balanceMinor(accountCode);
-        String currency = ledger.currencyOf(accountCode);
-        return String.format("%s balance: %.2f %s", accountCode, minor / 100.0, currency);
     }
 
     public record PaymentSummary(UUID id, String merchantReference, long amountMinor,

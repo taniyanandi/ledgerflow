@@ -50,7 +50,7 @@ class TemplateOpsAssistantClientTest {
         TemplateOpsAssistantClient client = new TemplateOpsAssistantClient(tool);
         OpsAssistantAnswer answer = client.ask("show me risky payments today");
 
-        assertThat(answer.answer()).contains("bedrock");
+        assertThat(answer.answer()).contains("payment id");
         assertThat(answer.toolsUsed()).isEmpty();
     }
 }

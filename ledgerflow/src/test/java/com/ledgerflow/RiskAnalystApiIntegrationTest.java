@@ -22,9 +22,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
- * End-to-end test for the LLM risk analyst endpoints, running under the 'test'
- * profile (ledgerflow.ai.provider defaults to 'template' — no AWS involved, so this
- * proves the request -> persist -> response path independent of any real LLM).
+ * End-to-end test for the risk analyst endpoints — the request -> persist ->
+ * response path, entirely local, no external service involved.
  */
 @SpringBootTest
 @AutoConfigureMockMvc

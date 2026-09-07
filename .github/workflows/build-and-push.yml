@@ -15,15 +15,17 @@
 # Until that's done, this workflow will fail at the "configure-aws-credentials"
 # step — the manual docker build/push commands in infra/terraform/README.md work
 # without any of this setup.
+#
+# Manual-trigger only for now (no `push` trigger): the AWS infra from
+# infra/terraform hasn't been applied yet either, so this would fail one step
+# later even with credentials configured (no ECR repo/ECS service to push to).
+# Once you've run `terraform apply` and set AWS_DEPLOY_ROLE_ARN, either run this
+# manually from the Actions tab, or add back a `push: branches: [main]` trigger.
 
 name: Build and push images
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - "ledgerflow/**"
-      - ".github/workflows/build-and-push.yml"
+  workflow_dispatch: {}
 
 permissions:
   id-token: write

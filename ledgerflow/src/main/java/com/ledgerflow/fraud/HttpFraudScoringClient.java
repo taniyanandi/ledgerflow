@@ -3,6 +3,7 @@ package com.ledgerflow.fraud;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 
@@ -24,7 +25,14 @@ public class HttpFraudScoringClient implements FraudScoringClient {
     public HttpFraudScoringClient(RestClient.Builder builder,
                                   org.springframework.core.env.Environment env) {
         String baseUrl = env.getProperty("ledgerflow.fraud.base-url", "http://localhost:8000");
-        this.client = builder.baseUrl(baseUrl).build();
+        int connectTimeoutMs = env.getProperty("ledgerflow.fraud.connect-timeout-ms", Integer.class, 1000);
+        int readTimeoutMs = env.getProperty("ledgerflow.fraud.read-timeout-ms", Integer.class, 3000);
+
+        // A slow service must time out into the fallback, not block the payment saga.
+        SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
+        factory.setConnectTimeout(connectTimeoutMs);
+        factory.setReadTimeout(readTimeoutMs);
+        this.client = builder.baseUrl(baseUrl).requestFactory(factory).build();
     }
 
     @Override

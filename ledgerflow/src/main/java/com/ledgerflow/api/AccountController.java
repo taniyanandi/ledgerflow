@@ -21,7 +21,8 @@ public class AccountController {
     @GetMapping
     public List<AccountResponse> list() {
         return ledger.listAccounts().stream()
-                .map(AccountResponse::from)
+                .map(a -> new AccountResponse(
+                        a.getCode(), a.getName(), a.getType().name(), a.getCurrency()))
                 .toList();
     }
 

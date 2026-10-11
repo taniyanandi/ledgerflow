@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -30,14 +31,18 @@ public class LedgerService {
         this.journals = journals;
     }
 
-    /** Capture: cash received from the acquirer becomes a payable owed to the merchant. */
+    /**
+     * Capture: cash received from the acquirer becomes a payable owed to the merchant.
+     */
     @Transactional
     public void postCapture(Payment payment) {
         post(payment, ACQUIRER_CASH, MERCHANT_PAYABLE,
                 "Capture for payment " + payment.getId());
     }
 
-    /** Refund: reverse the capture — reduce the payable, return the cash. */
+    /**
+     * Refund: reverse the capture — reduce the payable, return the cash.
+     */
     @Transactional
     public void postRefund(Payment payment) {
         post(payment, MERCHANT_PAYABLE, ACQUIRER_CASH,
@@ -65,6 +70,11 @@ public class LedgerService {
         long signed = journals.signedBalanceByAccountCode(accountCode);
         // Present a liability's balance as a positive number (its natural sign is credit).
         return account.getType() == Enums.AccountType.LIABILITY ? -signed : signed;
+    }
+
+    @Transactional(readOnly = true)
+    public List<LedgerAccount> listAccounts() {
+        return accounts.findAll();
     }
 
     public String currencyOf(String accountCode) {

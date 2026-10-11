@@ -31,18 +31,14 @@ public class LedgerService {
         this.journals = journals;
     }
 
-    /**
-     * Capture: cash received from the acquirer becomes a payable owed to the merchant.
-     */
+    /** Capture: cash received from the acquirer becomes a payable owed to the merchant. */
     @Transactional
     public void postCapture(Payment payment) {
         post(payment, ACQUIRER_CASH, MERCHANT_PAYABLE,
                 "Capture for payment " + payment.getId());
     }
 
-    /**
-     * Refund: reverse the capture — reduce the payable, return the cash.
-     */
+    /** Refund: reverse the capture — reduce the payable, return the cash. */
     @Transactional
     public void postRefund(Payment payment) {
         post(payment, MERCHANT_PAYABLE, ACQUIRER_CASH,

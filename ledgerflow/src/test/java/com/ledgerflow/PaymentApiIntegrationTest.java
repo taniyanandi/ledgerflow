@@ -1,7 +1,6 @@
 package com.ledgerflow;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ledgerflow.domain.LedgerAccount;
 import com.ledgerflow.repository.LedgerAccountRepository;
 import org.junit.jupiter.api.Test;
@@ -16,13 +15,16 @@ import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 import java.util.List;
 
-import static org.hamcrest.Matchers.*;
+import static org.hamcrest.Matchers.containsInAnyOrder;
+import static org.hamcrest.Matchers.hasSize;
+import static org.hamcrest.Matchers.is;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 /**
  * End-to-end tests against a real PostgreSQL via Testcontainers — the same
@@ -45,12 +47,9 @@ class PaymentApiIntegrationTest {
         registry.add("spring.datasource.password", postgres::getPassword);
     }
 
-    @Autowired
-    MockMvc mvc;
-    @Autowired
-    LedgerAccountRepository accounts;
-    @Autowired
-    ObjectMapper mapper;
+    @Autowired MockMvc mvc;
+    @Autowired ObjectMapper mapper;
+    @Autowired LedgerAccountRepository accounts;
 
     private static final String BODY = """
             {"merchantReference":"order-42","amountMinor":150000,"currency":"INR"}

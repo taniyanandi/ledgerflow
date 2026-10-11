@@ -53,6 +53,10 @@ ledgerflow:
     transport: ${EVENTS_TRANSPORT:kafka}
   fraud:
     base-url: ${FRAUD_BASE_URL:http://localhost:8000}
+    # Timeouts for the fraud-service call. Hitting either one degrades to the
+    # rules-based fallback instead of stalling the payment.
+    connect-timeout-ms: ${FRAUD_CONNECT_TIMEOUT_MS:1000}
+    read-timeout-ms: ${FRAUD_READ_TIMEOUT_MS:3000}
   ai:
     # 'template' generates narratives from the SHAP reasons locally, no external
     # service needed — the safe default for local dev, tests, and CI. Set to

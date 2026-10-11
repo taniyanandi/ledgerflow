@@ -1,0 +1,35 @@
+version: 2.1
+
+jobs:
+  build:
+    machine:
+      image: ubuntu-2204:current
+    steps:
+      - checkout
+      - run:
+          name: Install JDK 21
+          command: |
+            sudo apt-get update
+            sudo apt-get install -y openjdk-21-jdk
+            sudo update-alternatives --set java /usr/lib/jvm/java-21-openjdk-amd64/bin/java
+            sudo update-alternatives --set javac /usr/lib/jvm/java-21-openjdk-amd64/bin/javac
+            echo 'export JAVA_HOME=/usr/lib/jvm/java-21-openjdk-amd64' >> $BASH_ENV
+      - restore_cache:
+          keys:
+            - v1-dependencies-{{ checksum "pom.xml" }}
+            - v1-dependencies-
+      - run: mvn -B dependency:go-offline
+      - save_cache:
+          paths:
+            - ~/.m2
+          key: v1-dependencies-{{ checksum "pom.xml" }}
+      - run: mvn -B package
+      - store_test_results:
+          path: target/surefire-reports
+      - store_artifacts:
+          path: target/ledgerflow-0.1.0.jar
+
+workflows:
+  build-and-test:
+    jobs:
+      - build

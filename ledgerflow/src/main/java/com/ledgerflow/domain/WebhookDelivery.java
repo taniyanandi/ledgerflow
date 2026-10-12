@@ -57,6 +57,9 @@ public class WebhookDelivery {
     @Column(name = "delivered_at")
     private Instant deliveredAt;
 
+    @Column(name = "last_attempt_at")
+    private Instant lastAttemptAt;
+
     protected WebhookDelivery() {}
 
     public WebhookDelivery(WebhookSubscription subscription, UUID eventId,
@@ -73,17 +76,20 @@ public class WebhookDelivery {
     }
 
     public void recordSuccess(int httpStatus) {
+        Instant now = Instant.now();
         this.attemptCount++;
         this.lastHttpStatus = httpStatus;
         this.status = Enums.DeliveryStatus.DELIVERED;
-        this.deliveredAt = Instant.now();
+        this.deliveredAt = now;
         this.nextRetryAt = null;
+        this.lastAttemptAt = now;
     }
 
     public void recordFailure(int httpStatus, String error) {
         this.attemptCount++;
         this.lastHttpStatus = httpStatus;
         this.lastError = error;
+        this.lastAttemptAt = Instant.now();
 
         if (this.attemptCount >= MAX_ATTEMPTS) {
             this.status = Enums.DeliveryStatus.DEAD_LETTERED;
@@ -112,4 +118,7 @@ public class WebhookDelivery {
     public Instant getNextRetryAt() { return nextRetryAt; }
     public Instant getCreatedAt() { return createdAt; }
     public Instant getDeliveredAt() { return deliveredAt; }
+    public Instant getLastAttemptAt() {
+        return lastAttemptAt;
+    }
 }

@@ -1,0 +1,2 @@
+ALTER TABLE webhook_deliveries
+ADD COLUMN last_attempt_at TIMESTAMPTZ;

@@ -9,6 +9,11 @@ import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import com.ledgerflow.api.dto.WebhookDeliveryResponse;
+import com.ledgerflow.domain.WebhookDelivery;
+import com.ledgerflow.repository.WebhookDeliveryRepository;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 import java.util.List;
 import java.util.UUID;
@@ -18,9 +23,13 @@ import java.util.UUID;
 public class WebhookController {
 
     private final WebhookSubscriptionRepository subscriptions;
+    private final WebhookDeliveryRepository deliveries;
 
-    public WebhookController(WebhookSubscriptionRepository subscriptions) {
+    public WebhookController(
+            WebhookSubscriptionRepository subscriptions,
+            WebhookDeliveryRepository deliveries) {
         this.subscriptions = subscriptions;
+        this.deliveries = deliveries;
     }
 
     @PostMapping
@@ -57,6 +66,18 @@ public class WebhookController {
         sub.activate();
         subscriptions.save(sub);
         return WebhookSubscriptionResponse.from(sub);
+    }
+
+    @GetMapping("/{subscriptionId}/deliveries")
+    public Page<WebhookDeliveryResponse> listDeliveries(
+            @PathVariable UUID subscriptionId,
+            Pageable pageable) {
+
+        findOrThrow(subscriptionId);
+
+        return deliveries
+                .findBySubscriptionIdOrderByCreatedAtDesc(subscriptionId, pageable)
+                .map(WebhookDeliveryResponse::from);
     }
 
     private WebhookSubscription findOrThrow(UUID id) {

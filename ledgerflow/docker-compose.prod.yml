@@ -1,0 +1,68 @@
+# 生产部署专用：镜像全部来自 GHCR（由 GitHub Actions 构建推送），服务器上不再编译。
+# 与 docker-compose.yml 的区别：
+#   1. app / fraud-service 用 image 而不是 build（CI 已构建好）
+#   2. app 端口改为 8081（8080 已被服务器上其他应用占用）
+#   3. db / kafka 不对公网暴露端口，只在 compose 内部网络通信
+#   4. Kafka 与 JVM 内存设了上限，适配小内存服务器
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ledgerflow
+      POSTGRES_USER: ledgerflow
+      POSTGRES_PASSWORD: ledgerflow
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ledgerflow"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  kafka:
+    image: apache/kafka:3.8.0
+    restart: unless-stopped
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_HEAP_OPTS: "-Xmx256m -Xms256m"
+
+  fraud-service:
+    image: ghcr.io/letmesleep8h/ledgerflow-fraud:latest
+    restart: unless-stopped
+
+  app:
+    image: ghcr.io/letmesleep8h/ledgerflow-app:latest
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+      kafka:
+        condition: service_started
+      fraud-service:
+        condition: service_started
+    environment:
+      DB_URL: jdbc:postgresql://db:5432/ledgerflow
+      DB_USER: ledgerflow
+      DB_PASSWORD: ledgerflow
+      KAFKA_BOOTSTRAP: kafka:9092
+      EVENTS_TRANSPORT: kafka
+      FRAUD_BASE_URL: http://fraud-service:8000
+      # AI_PROVIDER 保持 template，compose 不需要任何 API key
+      AI_PROVIDER: template
+      JAVA_TOOL_OPTIONS: "-Xmx384m -Xms128m"
+    ports:
+      - "8081:8080"
+
+volumes:
+  pgdata:

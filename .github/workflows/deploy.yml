@@ -1,0 +1,74 @@
+name: CI/CD
+
+on:
+  push:
+    branches: [main]      # push 到 main 自动构建并部署
+  workflow_dispatch: {}   # 支持在 Actions 页面手动触发（测试用）
+
+env:
+  APP_IMAGE: ghcr.io/letmesleep8h/ledgerflow-app
+  FRAUD_IMAGE: ghcr.io/letmesleep8h/ledgerflow-fraud
+
+jobs:
+  build-push:
+    name: 构建镜像并推送到 GHCR
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build & push app
+        uses: docker/build-push-action@v6
+        with:
+          context: ./ledgerflow
+          push: true
+          tags: |
+            ${{ env.APP_IMAGE }}:latest
+            ${{ env.APP_IMAGE }}:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build & push fraud-service
+        uses: docker/build-push-action@v6
+        with:
+          context: ./ledgerflow/fraud-service
+          push: true
+          tags: |
+            ${{ env.FRAUD_IMAGE }}:latest
+            ${{ env.FRAUD_IMAGE }}:${{ github.sha }}
+
+  deploy:
+    name: 部署到服务器
+    needs: build-push
+    runs-on: ubuntu-latest
+    steps:
+      - name: SSH 部署
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            set -e
+            if [ ! -d /opt/ledgerflow/.git ]; then
+              git clone https://github.com/LetMeSleep8h/ledgerflow.git /opt/ledgerflow
+            fi
+            cd /opt/ledgerflow
+            git fetch origin ${{ github.sha }}
+            git checkout -f ${{ github.sha }}
+            cd ledgerflow
+            docker compose -f docker-compose.prod.yml pull
+            docker compose -f docker-compose.prod.yml up -d --remove-orphans
+            docker image prune -f
+            echo "=== 当前容器状态 ==="
+            docker compose -f docker-compose.prod.yml ps

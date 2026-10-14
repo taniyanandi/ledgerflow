@@ -13,6 +13,11 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+
 import java.util.UUID;
 
 @Service
@@ -75,7 +80,17 @@ public class PaymentService {
         return PaymentResponse.from(payment);
     }
 
+    /**
+     * Lists payments newest-first. Spring Data supplies findAll(Pageable).
+     */
     @Transactional(readOnly = true)
+    public Page<PaymentResponse> list(Pageable pageable) {
+        return payments.findAll(
+                PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(),
+                        Sort.by(Sort.Direction.DESC, "createdAt")))
+                .map(PaymentResponse::from);
+    }
+
     public PaymentResponse get(UUID paymentId) {
         return payments.findById(paymentId)
                 .map(PaymentResponse::from)

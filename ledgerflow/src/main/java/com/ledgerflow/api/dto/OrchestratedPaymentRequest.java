@@ -1,8 +1,8 @@
 package com.ledgerflow.api.dto;
 
 import com.ledgerflow.fraud.RiskSignals;
+import com.ledgerflow.validation.SupportedCurrency;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Positive;
 
 /**
@@ -12,7 +12,7 @@ import jakarta.validation.constraints.Positive;
 public record OrchestratedPaymentRequest(
         @NotBlank String merchantReference,
         @Positive long amountMinor,
-        @NotBlank @Pattern(regexp = "[A-Z]{3}") String currency,
+        @NotBlank @SupportedCurrency String currency,
         RiskInput risk
 ) {
     public record RiskInput(

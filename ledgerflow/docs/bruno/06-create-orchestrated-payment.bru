@@ -1,0 +1,42 @@
+meta {
+  name: 6. Create orchestrated payment (with risk signals)
+  type: http
+  seq: 6
+}
+
+post {
+  url: {{base_url}}/v1/orchestrated-payments
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "merchantReference": "ord-9",
+    "amountMinor": 250000,
+    "currency": "INR",
+    "risk": {
+      "amountZscore": 0.2,
+      "txnVelocity1h": 1,
+      "geoDistanceKm": 6,
+      "deviceNew": 0,
+      "hourOfDay": 13,
+      "isForeign": 0,
+      "cardAgeDays": 700
+    }
+  }
+}
+
+vars:post-response {
+  orchestrated_payment_id: res.body.id
+}
+
+docs {
+  Runs the saga: authorize -> ML risk check -> capture.
+  A high-risk payload (large amountZscore, high txnVelocity1h, far geoDistanceKm,
+  deviceNew 1, isForeign 1, small cardAgeDays) is declined with 402.
+}

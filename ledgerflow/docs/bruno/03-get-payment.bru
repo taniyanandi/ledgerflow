@@ -1,0 +1,15 @@
+meta {
+  name: 3. Get payment by ID
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{base_url}}/v1/payments/{{payment_id}}
+  body: none
+  auth: none
+}
+
+docs {
+  Run request 1 first so {{payment_id}} is populated.
+}

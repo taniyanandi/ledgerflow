@@ -1,0 +1,16 @@
+meta {
+  name: 5. Check account balance
+  type: http
+  seq: 5
+}
+
+get {
+  url: {{base_url}}/v1/accounts/ACQUIRER_CASH/balance
+  body: none
+  auth: none
+}
+
+docs {
+  Balances are derived live from ledger lines. Try MERCHANT_PAYABLE too;
+  after a capture both should match.
+}

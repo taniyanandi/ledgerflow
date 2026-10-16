@@ -1,0 +1,17 @@
+meta {
+  name: 7. Get risk explanation
+  type: http
+  seq: 7
+}
+
+get {
+  url: {{base_url}}/v1/orchestrated-payments/{{orchestrated_payment_id}}/risk-explanation
+  body: none
+  auth: none
+}
+
+docs {
+  Find-or-generate a plain-English narrative over the payment's SHAP reasons.
+  Run request 6 first so {{orchestrated_payment_id}} is populated.
+  Defaults to the deterministic template provider (no API key needed).
+}

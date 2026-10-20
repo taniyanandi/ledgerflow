@@ -1,6 +1,8 @@
 package com.ledgerflow;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.ledgerflow.domain.LedgerAccount;
+import com.ledgerflow.repository.LedgerAccountRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -15,6 +17,10 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import java.util.List;
+
+import static org.hamcrest.Matchers.containsInAnyOrder;
+import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -43,6 +49,7 @@ class PaymentApiIntegrationTest {
 
     @Autowired MockMvc mvc;
     @Autowired ObjectMapper mapper;
+    @Autowired LedgerAccountRepository accounts;
 
     private static final String BODY = """
             {"merchantReference":"order-42","amountMinor":150000,"currency":"INR"}
@@ -105,5 +112,21 @@ class PaymentApiIntegrationTest {
         mvc.perform(post("/v1/payments")
                         .contentType(MediaType.APPLICATION_JSON).content(BODY))
                 .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void listsAllLedgerAccounts() throws Exception {
+        List<String> expectedCodes = accounts.findAll().stream()
+                .map(LedgerAccount::getCode)
+                .toList();
+
+        mvc.perform(get("/v1/accounts"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(expectedCodes.size())))
+                .andExpect(jsonPath("$[*].code",
+                        containsInAnyOrder(expectedCodes.toArray(new String[0]))))
+                .andExpect(jsonPath("$[0].name").exists())
+                .andExpect(jsonPath("$[0].type").exists())
+                .andExpect(jsonPath("$[0].currency").exists());
     }
 }

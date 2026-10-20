@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -65,6 +66,11 @@ public class LedgerService {
         long signed = journals.signedBalanceByAccountCode(accountCode);
         // Present a liability's balance as a positive number (its natural sign is credit).
         return account.getType() == Enums.AccountType.LIABILITY ? -signed : signed;
+    }
+
+    @Transactional(readOnly = true)
+    public List<LedgerAccount> listAccounts() {
+        return accounts.findAll();
     }
 
     public String currencyOf(String accountCode) {

@@ -1,0 +1,26 @@
+meta {
+  name: 8. Ask the ops assistant
+  type: http
+  seq: 8
+}
+
+post {
+  url: {{base_url}}/v1/ops-assistant/ask
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "question": "Why was payment {{orchestrated_payment_id}} declined?"
+  }
+}
+
+docs {
+  Ask about a specific payment by id. The payment is looked up deterministically first.
+  NOTE: confirm the exact request field names against the controller's request class.
+}

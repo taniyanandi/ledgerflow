@@ -26,18 +26,18 @@ Three decisions drive everything else, and each is a deliberate correctness choi
 
 ```mermaid
 flowchart LR
-    Client -->|POST /v1/payments\nIdempotency-Key| API[PaymentController]
-    API --> PS[PaymentService]
-    PS --> IDEM[IdempotencyService]
-    PS --> LEDGER[LedgerService]
-    IDEM --> DB[(PostgreSQL)]
-    LEDGER --> DB
-    PS --> DB
-    subgraph Ledger core
-        LEDGER --> JE[JournalEntry\nassertBalanced]
-        JE --> L1[LedgerLine DEBIT]
-        JE --> L2[LedgerLine CREDIT]
-    end
+  Client -->|POST /v1/payments\nIdempotency-Key| API[PaymentController]
+  API --> PS[PaymentService]
+  PS --> IDEM[IdempotencyService]
+  PS --> LEDGER[LedgerService]
+  IDEM --> DB[(PostgreSQL)]
+  LEDGER --> DB
+  PS --> DB
+  subgraph Ledger core
+    LEDGER --> JE[JournalEntry\nassertBalanced]
+    JE --> L1[LedgerLine DEBIT]
+    JE --> L2[LedgerLine CREDIT]
+  end
 ```
 
 A payment capture posts one balanced journal entry:
@@ -161,11 +161,37 @@ curl -s http://localhost:8080/v1/orchestrated-payments/<payment-id>/events | jq
 - Health / metrics: `http://localhost:8080/actuator/health`
 - Fraud API docs: `http://localhost:8000/docs`
 
+Prefer a GUI over `curl`? See [API collection](#api-collection) below.
+
 Run tests (needs Docker for Testcontainers):
 
 ```bash
 mvn test
 ```
+
+---
+
+## API collection
+
+A ready-made [Bruno](https://www.usebruno.com/) collection lives in [`docs/bruno/`](docs/bruno). It lets you import the API and start sending requests in under a minute, with no hand-written `curl` commands.
+
+1. Start the app: `docker compose up --build`
+2. Open Bruno, choose **Open Collection**, and select the `docs/bruno` folder.
+3. Pick the **local** environment in the top-right dropdown. `base_url` defaults to `http://localhost:8080`.
+4. Run the requests in order:
+
+| # | Request | What it shows |
+|---|---|---|
+| 1 | Create payment | `POST /v1/payments` with an `Idempotency-Key` header |
+| 2 | Retry same payment | Same key and body replays the original result |
+| 3 | Get payment by ID | `GET /v1/payments/{id}` |
+| 4 | Refund payment | `POST /v1/payments/{id}/refund` |
+| 5 | Check account balance | `GET /v1/accounts/{code}/balance` |
+| 6 | Create orchestrated payment | Full saga with risk signals |
+| 7 | Get risk explanation | `GET /v1/orchestrated-payments/{id}/risk-explanation` |
+| 8 | Ask the ops assistant | `POST /v1/ops-assistant/ask` |
+
+Requests 1 and 6 save the returned payment IDs into environment variables, so requests 3, 4, 7, and 8 work without copy-pasting.
 
 ---
 
@@ -204,4 +230,3 @@ Idempotency semantics:
 ## License
 
 MIT
-

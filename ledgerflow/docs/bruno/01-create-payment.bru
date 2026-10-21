@@ -1,0 +1,33 @@
+meta {
+  name: 1. Create payment
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{base_url}}/v1/payments
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+  Idempotency-Key: {{idempotency_key}}
+}
+
+body:json {
+  {
+    "merchantReference": "order-42",
+    "amountMinor": 150000,
+    "currency": "INR"
+  }
+}
+
+vars:post-response {
+  payment_id: res.body.id
+}
+
+docs {
+  Creates and captures a payment. The Idempotency-Key header is required.
+  Saves the returned payment id into {{payment_id}} for the next requests.
+}

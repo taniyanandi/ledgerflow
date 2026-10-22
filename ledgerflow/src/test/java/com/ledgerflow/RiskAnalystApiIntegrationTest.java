@@ -2,6 +2,8 @@ package com.ledgerflow;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.ledgerflow.domain.Payment;
+import com.ledgerflow.repository.PaymentRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -15,7 +17,10 @@ import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
+import java.util.UUID;
+
 import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.is;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -43,6 +48,33 @@ class RiskAnalystApiIntegrationTest {
 
     @Autowired MockMvc mvc;
     @Autowired ObjectMapper mapper;
+    @Autowired PaymentRepository payments;
+
+    @Test
+    void returnsStoredRiskDecision() throws Exception {
+        String body = """
+                {"merchantReference":"ord-risk-decision","amountMinor":5000,"currency":"INR",
+                 "risk":{"amountZscore":0.1,"txnVelocity1h":1,"geoDistanceKm":4,
+                         "deviceNew":0,"hourOfDay":14,"isForeign":0,"cardAgeDays":900}}
+                """;
+        String created = mvc.perform(post("/v1/orchestrated-payments")
+                        .contentType(MediaType.APPLICATION_JSON).content(body))
+                .andExpect(status().isCreated())
+                .andReturn().getResponse().getContentAsString();
+        String paymentId = mapper.readTree(created).get("id").asText();
+
+        mvc.perform(get("/v1/orchestrated-payments/" + paymentId + "/risk-decision"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.fraudProbability", is(0.0)))
+                .andExpect(jsonPath("$.decision", is("APPROVE")))
+                .andExpect(jsonPath("$.reasons[0].feature", is("fallback")))
+                .andExpect(jsonPath("$.degraded", is(true)));
+
+        UUID pendingPaymentId = UUID.randomUUID();
+        payments.save(new Payment(pendingPaymentId, "ord-pending-" + pendingPaymentId, 5000, "INR"));
+        mvc.perform(get("/v1/orchestrated-payments/" + pendingPaymentId + "/risk-decision"))
+                .andExpect(status().isNotFound());
+    }
 
     @Test
     void explainsAndCanBeQueriedByOpsAssistantAfterADecline() throws Exception {

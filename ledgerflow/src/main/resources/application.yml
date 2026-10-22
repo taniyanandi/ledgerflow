@@ -63,6 +63,12 @@ ledgerflow:
       model: ${ANTHROPIC_MODEL:claude-haiku-4-5-20251001}
       timeout-ms: ${ANTHROPIC_TIMEOUT_MS:15000}
       max-tokens: ${ANTHROPIC_MAX_TOKENS:600}
+  webhook:
+    # Preserve current defaults: retries after 10s, 40s, 90s, and 160s.
+    max-attempts: ${LEDGERFLOW_WEBHOOK_MAX_ATTEMPTS:5}
+    initial-backoff-seconds: ${LEDGERFLOW_WEBHOOK_INITIAL_BACKOFF_SECONDS:10}
+    # Exponent applied to attempt number: 10 * 1^2, 10 * 2^2, ...
+    backoff-multiplier: ${LEDGERFLOW_WEBHOOK_BACKOFF_MULTIPLIER:2.0}
 
 springdoc:
   swagger-ui:

@@ -50,14 +50,17 @@ public class RiskExplanationService {
                 .orElseGet(() -> generate(paymentId));
     }
 
+    @Transactional(readOnly = true)
+    public RiskDecision findDecision(UUID paymentId) {
+        return toRiskDecision(decisions.findTopByPaymentIdOrderByCreatedAtDesc(paymentId)
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND,
+                        "No risk decision recorded for payment: " + paymentId)));
+    }
+
     private RiskExplanationRecord generate(UUID paymentId) {
         Payment payment = payments.findById(paymentId)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Payment not found: " + paymentId));
-        RiskDecisionRecord decisionRecord = decisions.findTopByPaymentIdOrderByCreatedAtDesc(paymentId)
-                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND,
-                        "No risk decision recorded for payment: " + paymentId));
-
-        RiskDecision decision = toRiskDecision(decisionRecord);
+        RiskDecision decision = findDecision(paymentId);
         RiskExplanation explanation = client.explain(payment, decision);
 
         RiskExplanationRecord record = new RiskExplanationRecord(

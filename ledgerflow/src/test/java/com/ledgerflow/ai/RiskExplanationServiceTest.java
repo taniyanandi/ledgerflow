@@ -5,6 +5,7 @@ import com.ledgerflow.domain.Payment;
 import com.ledgerflow.domain.RiskDecisionRecord;
 import com.ledgerflow.domain.RiskExplanationRecord;
 import com.ledgerflow.exception.ApiException;
+import com.ledgerflow.fraud.RiskDecision;
 import com.ledgerflow.repository.PaymentRepository;
 import com.ledgerflow.repository.RiskDecisionRepository;
 import com.ledgerflow.repository.RiskExplanationRepository;
@@ -48,12 +49,31 @@ class RiskExplanationServiceTest {
     }
 
     @Test
+    void returnsStoredDecisionWithoutCallingTheClient() throws Exception {
+        UUID paymentId = UUID.randomUUID();
+        ObjectMapper mapper = new ObjectMapper();
+        var reason = new RiskDecision.Reason("velocity", "high velocity", 0.3);
+        RiskDecisionRecord record = new RiskDecisionRecord(
+                UUID.randomUUID(), paymentId, 0.7, "REVIEW",
+                mapper.writeValueAsString(List.of(reason)), false, Instant.now());
+        when(decisions.findTopByPaymentIdOrderByCreatedAtDesc(paymentId)).thenReturn(Optional.of(record));
+
+        var result = service(mapper).findDecision(paymentId);
+
+        assertThat(result.fraudProbability()).isEqualTo(0.7);
+        assertThat(result.decision()).isEqualTo(RiskDecision.Decision.REVIEW);
+        assertThat(result.reasons()).containsExactly(reason);
+        assertThat(result.degraded()).isFalse();
+        verifyNoInteractions(client);
+    }
+
+    @Test
     void generatesAndPersistsWhenNoneExists() throws Exception {
         UUID paymentId = UUID.randomUUID();
         ObjectMapper mapper = new ObjectMapper();
         Payment payment = new Payment(paymentId, "ord-1", 5000, "INR");
         String reasonsJson = mapper.writeValueAsString(List.of(
-                new com.ledgerflow.fraud.RiskDecision.Reason("device_new", "new device", 0.4)));
+                new RiskDecision.Reason("device_new", "new device", 0.4)));
         RiskDecisionRecord decisionRecord = new RiskDecisionRecord(
                 UUID.randomUUID(), paymentId, 0.8, "DECLINE", reasonsJson, false, Instant.now());
 

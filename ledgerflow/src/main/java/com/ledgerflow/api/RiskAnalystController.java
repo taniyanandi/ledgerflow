@@ -4,6 +4,7 @@ import com.ledgerflow.ai.OpsAssistantService;
 import com.ledgerflow.ai.RiskExplanationService;
 import com.ledgerflow.api.dto.AskAssistantRequest;
 import com.ledgerflow.api.dto.AskAssistantResponse;
+import com.ledgerflow.api.dto.RiskDecisionResponse;
 import com.ledgerflow.api.dto.RiskExplanationResponse;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.*;
@@ -30,6 +31,11 @@ public class RiskAnalystController {
     @GetMapping("/v1/orchestrated-payments/{id}/risk-explanation")
     public RiskExplanationResponse riskExplanation(@PathVariable UUID id) {
         return RiskExplanationResponse.from(explanations.findOrGenerate(id));
+    }
+
+    @GetMapping("/v1/orchestrated-payments/{id}/risk-decision")
+    public RiskDecisionResponse riskDecision(@PathVariable UUID id) {
+        return RiskDecisionResponse.from(explanations.findDecision(id));
     }
 
     /** Ask the ops assistant a natural-language question about payments/ledger state. */

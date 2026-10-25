@@ -6,14 +6,12 @@ import java.util.UUID;
 
 /**
  * Tracks each attempt to deliver a webhook event to a subscriber. Failed
- * deliveries are retried with exponential backoff up to a maximum number of
- * attempts; after that they are dead-lettered.
+ * deliveries are retried with exponential backoff up to a configured maximum
+ * number of attempts; after that they are dead-lettered.
  */
 @Entity
 @Table(name = "webhook_deliveries")
 public class WebhookDelivery {
-
-    public static final int MAX_ATTEMPTS = 5;
 
     @Id
     @Column(nullable = false, updatable = false)
@@ -80,24 +78,27 @@ public class WebhookDelivery {
         this.nextRetryAt = null;
     }
 
-    public void recordFailure(int httpStatus, String error) {
+    public void recordFailure(int httpStatus, String error, int maxAttempts,
+                              long initialBackoffSeconds, double backoffMultiplier) {
         this.attemptCount++;
         this.lastHttpStatus = httpStatus;
         this.lastError = error;
 
-        if (this.attemptCount >= MAX_ATTEMPTS) {
+        if (this.attemptCount >= maxAttempts) {
             this.status = Enums.DeliveryStatus.DEAD_LETTERED;
             this.nextRetryAt = null;
         } else {
             this.status = Enums.DeliveryStatus.FAILED;
-            // Exponential backoff: 10s, 40s, 90s, 160s ...
-            long backoffSeconds = 10L * (long) Math.pow(attemptCount, 2);
+            // Preserve the existing schedule by default: 10s, 40s, 90s, 160s ...
+            long backoffSeconds = (long) (initialBackoffSeconds
+                    * Math.pow(this.attemptCount, backoffMultiplier));
             this.nextRetryAt = Instant.now().plusSeconds(backoffSeconds);
         }
     }
 
-    public void recordNetworkFailure(String error) {
-        recordFailure(0, error);
+    public void recordNetworkFailure(String error, int maxAttempts,
+                                     long initialBackoffSeconds, double backoffMultiplier) {
+        recordFailure(0, error, maxAttempts, initialBackoffSeconds, backoffMultiplier);
     }
 
     public UUID getId() { return id; }

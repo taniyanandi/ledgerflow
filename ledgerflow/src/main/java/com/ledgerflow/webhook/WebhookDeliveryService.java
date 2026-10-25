@@ -1,5 +1,6 @@
 package com.ledgerflow.webhook;
 
+import com.ledgerflow.config.WebhookProperties;
 import com.ledgerflow.domain.Enums;
 import com.ledgerflow.domain.WebhookDelivery;
 import com.ledgerflow.domain.WebhookSubscription;
@@ -37,13 +38,16 @@ public class WebhookDeliveryService {
     private final WebhookDeliveryRepository deliveries;
     private final WebhookSigningService signing;
     private final RestTemplate restTemplate;
+    private final WebhookProperties webhookProperties;
 
     public WebhookDeliveryService(WebhookSubscriptionRepository subscriptions,
                                   WebhookDeliveryRepository deliveries,
-                                  WebhookSigningService signing) {
+                                  WebhookSigningService signing,
+                                  WebhookProperties webhookProperties) {
         this.subscriptions = subscriptions;
         this.deliveries = deliveries;
         this.signing = signing;
+        this.webhookProperties = webhookProperties;
         this.restTemplate = new RestTemplate();
     }
 
@@ -109,12 +113,13 @@ public class WebhookDeliveryService {
                 log.debug("Webhook delivered: {} → {} (HTTP {})",
                         delivery.getId(), sub.getUrl(), statusCode);
             } else {
-                delivery.recordFailure(statusCode, "Non-2xx response: " + statusCode);
+                recordFailure(delivery, statusCode, "Non-2xx response: " + statusCode);
                 log.warn("Webhook delivery {} returned HTTP {} (attempt {})",
                         delivery.getId(), statusCode, delivery.getAttemptCount());
             }
         } catch (Exception e) {
-            delivery.recordNetworkFailure(e.getMessage());
+            delivery.recordNetworkFailure(e.getMessage(), webhookProperties.getMaxAttempts(),
+                    webhookProperties.getInitialBackoffSeconds(), webhookProperties.getBackoffMultiplier());
             log.warn("Webhook delivery {} failed: {} (attempt {})",
                     delivery.getId(), e.getMessage(), delivery.getAttemptCount());
         }
@@ -125,5 +130,10 @@ public class WebhookDeliveryService {
         }
 
         deliveries.save(delivery);
+    }
+
+    private void recordFailure(WebhookDelivery delivery, int statusCode, String error) {
+        delivery.recordFailure(statusCode, error, webhookProperties.getMaxAttempts(),
+                webhookProperties.getInitialBackoffSeconds(), webhookProperties.getBackoffMultiplier());
     }
 }

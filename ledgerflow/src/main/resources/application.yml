@@ -66,6 +66,15 @@ ledgerflow:
       timeout-ms: ${ANTHROPIC_TIMEOUT_MS:15000}
       max-tokens: ${ANTHROPIC_MAX_TOKENS:600}
 
+
+# Every log line carries the request's correlation ID (set by
+# CorrelationIdFilter from the X-Correlation-Id header, or generated) so a
+# single request can be traced through controller -> service -> Kafka.
+logging:
+  pattern:
+    console: "%d{yyyy-MM-dd'T'HH:mm:ss.SSSXXX} %5p ${PID:-} --- [%t] %-40.40logger{39} [%X{correlationId:-}] : %msg%n"
+    level: "%5p [%X{correlationId:-}]"
+
 springdoc:
   swagger-ui:
     path: /swagger-ui.html

@@ -28,7 +28,9 @@ public class OrchestratedPaymentController {
         this.eventRepository = eventRepository;
     }
 
-    /** Runs the full saga: authorize → ML risk check → capture. */
+    /**
+     * Runs the full saga: authorize → ML risk check → capture.
+     */
     @PostMapping
     public ResponseEntity<PaymentResponse> create(
             @Valid @RequestBody OrchestratedPaymentRequest request) {
@@ -38,7 +40,9 @@ public class OrchestratedPaymentController {
         return ResponseEntity.status(HttpStatus.CREATED).body(PaymentResponse.from(payment));
     }
 
-    /** The persisted event audit trail for a payment (populated by the Kafka consumer). */
+    /**
+     * The persisted event audit trail for a payment (populated by the Kafka consumer).
+     */
     @GetMapping("/{id}/events")
     public List<Map<String, Object>> events(@PathVariable UUID id) {
         return eventRepository.findByPaymentIdOrderByOccurredAtAsc(id).stream()

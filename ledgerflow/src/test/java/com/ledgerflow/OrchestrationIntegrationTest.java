@@ -67,4 +67,13 @@ class OrchestrationIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON).content(body))
                 .andExpect(status().isPaymentRequired());
     }
+    @Test
+    void invalidPaymentRequestReturnsBadRequest() throws Exception {
+        String invalidBody = """
+                {"merchantReference":"","amountMinor":-100,"currency":"INVALID"}
+                """;
+        mvc.perform(post("/v1/orchestrated-payments")
+                        .contentType(MediaType.APPLICATION_JSON).content(invalidBody))
+                .andExpect(status().isBadRequest());
+    }
 }

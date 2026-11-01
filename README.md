@@ -122,6 +122,22 @@ mvn test
 
 ---
 
+## Configuration
+
+Webhook retry behavior can be adjusted without changing code. The defaults preserve the existing retry schedule: 10, 40, 90, and 160 seconds between attempts, with the fifth failed attempt dead-lettered.
+
+| Property | Default | Description |
+|---|---:|---|
+| `ledgerflow.webhook.max-attempts` | `5` | Maximum attempts before a delivery is dead-lettered. |
+| `ledgerflow.webhook.initial-backoff-seconds` | `10` | Base delay in seconds used by the retry formula. |
+| `ledgerflow.webhook.backoff-multiplier` | `2.0` | Exponent applied to the attempt number in the formula: base delay × attempt number ^ exponent. |
+
+Set these values in `ledgerflow/src/main/resources/application.yml` or override them with environment variables `LEDGERFLOW_WEBHOOK_MAX_ATTEMPTS`, `LEDGERFLOW_WEBHOOK_INITIAL_BACKOFF_SECONDS`, and `LEDGERFLOW_WEBHOOK_BACKOFF_MULTIPLIER`.
+
+For example, setting the initial delay to `5` and the multiplier to `1.0` gives delays of 5, 10, 15, and 20 seconds before the configured maximum attempt count is reached.
+
+---
+
 ## API reference
 
 | Method | Path | Notes |
@@ -132,7 +148,7 @@ mvn test
 | `GET` | `/v1/accounts/{code}/balance` | Live, derived account balance |
 | `POST` | `/v1/orchestrated-payments` | Full saga: authorize → ML risk check → capture |
 | `GET` | `/v1/orchestrated-payments/{id}/events` | Persisted Kafka event audit trail |
-| `GET` | `/v1/orchestrated-payments/{id}/risk-explanation` | LLM narrative over SHAP risk reasons |
+| `GET` | `/v1/orchestrated-payments/{id}/risk-explanation` | LLM narrative over SHAP reasons |
 | `POST` | `/v1/ops-assistant/ask` | Ask about a payment; Claude answers from retrieved facts |
 | `POST` | `/v1/webhooks` | Register a webhook endpoint |
 | `POST` | `/v1/reconciliation/run` | Run settlement file reconciliation |
@@ -177,5 +193,3 @@ ledgerflow/              ← Spring Boot app (Java 21)
   .circleci/config.yml   ← CI pipeline
 CONTRIBUTING.md
 ```
-
-
